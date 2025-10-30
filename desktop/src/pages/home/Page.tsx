@@ -16,12 +16,16 @@ import { useEffect } from 'react'
 import { webviewWindow } from '@tauri-apps/api'
 import * as keepAwake from 'tauri-plugin-keepawake-api'
 import AdvancedTranscribe from '~/components/AdvancedTranscribe'
+import { isTauri } from '@tauri-apps/api/core'
 
 export default function Home() {
 	const { t } = useTranslation()
 	const vm = viewModel()
 
 	async function showWindow() {
+		if (!isTauri()) {
+			return
+		}
 		const currentWindow = webviewWindow.getCurrentWebviewWindow()
 		await currentWindow.show()
 		if (import.meta.env.PROD) {
