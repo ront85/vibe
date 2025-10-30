@@ -1,6 +1,5 @@
 import { resolveResource } from '@tauri-apps/api/path'
 import * as fs from '@tauri-apps/plugin-fs'
-import { locale } from '@tauri-apps/plugin-os'
 import i18n, { LanguageDetectorAsyncModule } from 'i18next'
 import { initReactI18next } from 'react-i18next/initReactI18next'
 import { isTauri } from '@tauri-apps/api/core'
@@ -41,17 +40,30 @@ const LanguageDetector: LanguageDetectorAsyncModule = {
 	detect: (callback) => {
 		// Only try to detect system locale in Tauri context
 		if (isTauri()) {
-			locale().then((detectedLocale) => {
-				const prefs_language = localStorage.getItem('prefs_display_language')
-				if (prefs_language) {
-					const locale = JSON.parse(prefs_language)
-					callback(locale)
-				} else {
-					if (detectedLocale) {
-						callback(detectedLocale)
+			// Dynamically import Tauri API to avoid loading in browser mode
+			import('@tauri-apps/plugin-os')
+				.then((osModule) => osModule.locale())
+				.then((detectedLocale) => {
+					const prefs_language = localStorage.getItem('prefs_display_language')
+					if (prefs_language) {
+						const locale = JSON.parse(prefs_language)
+						callback(locale)
+					} else {
+						if (detectedLocale) {
+							callback(detectedLocale)
+						}
 					}
-				}
-			})
+				})
+				.catch(() => {
+					// Fallback if locale detection fails
+					const prefs_language = localStorage.getItem('prefs_display_language')
+					if (prefs_language) {
+						const locale = JSON.parse(prefs_language)
+						callback(locale)
+					} else {
+						callback('en-US')
+					}
+				})
 		} else {
 			// In browser mode, use stored preference or default
 			const prefs_language = localStorage.getItem('prefs_display_language')
@@ -77,7 +89,7 @@ const loadResources = async (language: string) => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const translations: any = {}
 
-		if (isTauri) {
+		if (isTauri()) {
 			// Production mode: Load from Tauri bundled resources
 			const resourcePath = `./locales/${language}`
 			const languageDirectory = await resolveResource(resourcePath)
@@ -120,11 +132,20 @@ const i18nInitPromise = (async () => {
 
 	if (prefs_language) {
 		detectedLanguage = JSON.parse(prefs_language)
-	} else if (isTauri) {
+	} else if (isTauri()) {
 		// Use Tauri API in production
-		const osLocale = await locale()
-		if (osLocale && supportedLanguageKeys.includes(osLocale)) {
-			detectedLanguage = osLocale
+		try {
+			const { locale } = await import('@tauri-apps/plugin-os')
+			const osLocale = await locale()
+			if (osLocale && supportedLanguageKeys.includes(osLocale)) {
+				detectedLanguage = osLocale
+			}
+		} catch (error) {
+			// Fallback if locale detection fails
+			const browserLocale = navigator.language
+			if (browserLocale && supportedLanguageKeys.includes(browserLocale)) {
+				detectedLanguage = browserLocale
+			}
 		}
 	} else {
 		// Use browser API in development
@@ -135,7 +156,7 @@ const i18nInitPromise = (async () => {
 	}
 
 	console.log('Detected language:', detectedLanguage)
-	console.log('Running in:', isTauri ? 'Tauri mode' : 'Browser mode')
+	console.log('Running in:', isTauri() ? 'Tauri mode' : 'Browser mode')
 
 	// Load translations for detected language
 	const resources = await loadResources(detectedLanguage)
