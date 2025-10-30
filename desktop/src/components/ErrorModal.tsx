@@ -1,9 +1,7 @@
-import * as shell from '@tauri-apps/plugin-shell'
 import { useTranslation } from 'react-i18next'
 import { ReactComponent as CopyIcon } from '~/icons/copy.svg'
 import { ModifyState, cx, getIssueUrl, resetApp } from '~/lib/utils'
 import { ErrorModalState } from '~/providers/ErrorModal'
-import * as clipboard from '@tauri-apps/plugin-clipboard-manager'
 import { collectLogs } from '~/lib/logs'
 
 interface ErrorModalProps {
@@ -28,7 +26,14 @@ export default function ErrorModal({ state, setState }: ErrorModalProps) {
 		}
 
 		const url = await getIssueUrl(state?.log + '\n' + info)
-		shell.open(url)
+		const isTauri = '__TAURI__' in window
+		if (isTauri) {
+			const shell = await import('@tauri-apps/plugin-shell')
+			shell.open(url)
+		} else {
+			// In browser mode, just copy to clipboard or open in new window
+			window.open(url, '_blank')
+		}
 	}
 
 	return (
@@ -41,7 +46,16 @@ export default function ErrorModal({ state, setState }: ErrorModalProps) {
 					<CopyIcon
 						className="w-6 h-6 z-10 right-4 bottom-4 absolute strokeBase-content
     opacity-50 cursor-pointer"
-						onMouseDown={() => clipboard.writeText(state?.log ?? '')}
+						onMouseDown={async () => {
+							const isTauri = '__TAURI__' in window
+							if (isTauri) {
+								const clipboard = await import('@tauri-apps/plugin-clipboard-manager')
+								clipboard.writeText(state?.log ?? '')
+							} else {
+								// Fallback to native clipboard API in browser mode
+								navigator.clipboard?.writeText(state?.log ?? '')
+							}
+						}}
 					/>
 				</div>
 				<div className="flex justify-center gap-3 mt-3">
