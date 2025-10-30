@@ -3,7 +3,6 @@ import { ReactNode, createContext, useContext, useEffect, useRef } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { TextFormat } from '~/components/FormatSelect'
 import { ModifyState } from '~/lib/utils'
-import * as os from '@tauri-apps/plugin-os'
 import { supportedLanguages } from '~/lib/i18n'
 import WhisperLanguages from '~/assets/whisper-languages.json'
 import { useTranslation } from 'react-i18next'
@@ -173,11 +172,20 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 	}, [])
 
 	useEffect(() => {
-		if (!isMounted.current || os.platform() !== 'windows') {
-			isMounted.current = true
-			return
+		const checkPlatform = async () => {
+			const isTauri = '__TAURI__' in window
+			if (!isMounted.current) {
+				isMounted.current = true
+				return
+			}
+			if (isTauri) {
+				const os = await import('@tauri-apps/plugin-os')
+				if (os.platform() === 'windows') {
+					invoke('set_high_gpu_preference', { mode: highGraphicsPreference })
+				}
+			}
 		}
-		invoke('set_high_gpu_preference', { mode: highGraphicsPreference })
+		checkPlatform()
 	}, [highGraphicsPreference])
 
 	useEffect(() => {

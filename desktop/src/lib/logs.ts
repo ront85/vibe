@@ -1,7 +1,6 @@
 import { app } from '@tauri-apps/api'
 import { invoke } from '@tauri-apps/api/core'
 import { ls } from './utils'
-import * as os from '@tauri-apps/plugin-os'
 
 export async function getPrettyVersion() {
 	const appVersion = await app.getVersion()
@@ -35,11 +34,23 @@ export async function getAppInfo() {
 	} else {
 		x86Features = 'CPU feature detection is not supported on this architecture.'
 	}
-	const arch = os.arch()
-	const platform = os.platform()
-	const kVer = os.version()
-	const osType = os.type()
-	const osVer = os.version()
+
+	// Dynamically import os module only in Tauri context
+	let arch = 'unknown'
+	let platform = 'unknown'
+	let kVer = 'unknown'
+	let osType = 'unknown'
+	let osVer = 'unknown'
+
+	const isTauri = '__TAURI__' in window
+	if (isTauri) {
+		const os = await import('@tauri-apps/plugin-os')
+		arch = os.arch()
+		platform = os.platform()
+		kVer = os.version()
+		osType = os.type()
+		osVer = os.version()
+	}
 	const configPath = await invoke<string>('get_models_folder')
 	const entries = await ls(configPath)
 	const cudaVersion = await invoke('get_cuda_version')

@@ -1,10 +1,11 @@
 import * as event from '@tauri-apps/api/event'
 import { basename } from '@tauri-apps/api/path'
 import * as webview from '@tauri-apps/api/webview'
-import * as os from '@tauri-apps/plugin-os'
 import { useEffect, useRef, useState } from 'react'
 import { ReactComponent as DocumentIcon } from '~/icons/document.svg'
 import { cx, formatLongString, validPath } from '~/lib/utils'
+
+type Platform = 'linux' | 'macos' | 'windows'
 
 interface Position {
 	x: number
@@ -27,7 +28,7 @@ export default function DropModal() {
 	const [position, setPosition] = useState<Position>({ x: 0, y: 0 })
 	const listeners = useRef<event.UnlistenFn[]>([])
 	const [path, setPath] = useState('')
-	const [platform, setPlatofrm] = useState<os.Platform>('macos')
+	const [platform, setPlatform] = useState<Platform>('macos')
 
 	async function handleDrops() {
 		// Add blur
@@ -72,8 +73,15 @@ export default function DropModal() {
 	}
 
 	useEffect(() => {
-		handleDrops()
-		setPlatofrm(os.platform())
+		const initDrops = async () => {
+			await handleDrops()
+			const isTauri = '__TAURI__' in window
+			if (isTauri) {
+				const os = await import('@tauri-apps/plugin-os')
+				setPlatform(os.platform())
+			}
+		}
+		initDrops()
 		return () => {
 			listeners.current.forEach((unlisten) => unlisten())
 		}

@@ -17,8 +17,9 @@ import { supportedLanguages } from '~/lib/i18n'
 import { ModifyState, cx } from '~/lib/utils'
 import { viewModel } from './viewModel'
 import DictationSettings from './DictationSettings'
-import * as os from '@tauri-apps/plugin-os'
 import { useEffect, useState } from 'react'
+
+type Platform = 'linux' | 'macos' | 'windows'
 
 interface SettingsPageProps {
 	setVisible: ModifyState<boolean>
@@ -28,10 +29,14 @@ export default function SettingsPage({ setVisible }: SettingsPageProps) {
 	const { t, i18n } = useTranslation()
 	const vm = viewModel()
 
-	const [platform, setPlatform] = useState<os.Platform | null>(null)
+	const [platform, setPlatform] = useState<Platform | null>(null)
 
 	async function getPlatform() {
-		setPlatform(os.platform())
+		const isTauri = '__TAURI__' in window
+		if (isTauri) {
+			const os = await import('@tauri-apps/plugin-os')
+			setPlatform(os.platform())
+		}
 	}
 
 	useEffect(() => {

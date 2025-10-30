@@ -5,7 +5,8 @@ import { InfoTooltip } from '~/components/InfoTooltip'
 import { AudioDevice } from '~/lib/audio'
 import { useDictation } from '~/providers/Dictation'
 import toast from 'react-hot-toast'
-import * as os from '@tauri-apps/plugin-os'
+
+type Platform = 'linux' | 'macos' | 'windows'
 
 interface DictationSettingsProps {
 	// No props needed - all state comes from DictationProvider
@@ -48,12 +49,19 @@ export default function DictationSettings({}: DictationSettingsProps) {
 	const [loadingDevices, setLoadingDevices] = useState(false)
 	const [shortcutInput, setShortcutInput] = useState(dictation.keyboardShortcut)
 	const [shortcutConflict, setShortcutConflict] = useState<string | null>(null)
-	const [platform, setPlatform] = useState<os.Platform | null>(null)
+	const [platform, setPlatform] = useState<Platform | null>(null)
 
 	// Load audio devices on mount
 	useEffect(() => {
-		loadAudioDevices()
-		setPlatform(os.platform())
+		const initSettings = async () => {
+			await loadAudioDevices()
+			const isTauri = '__TAURI__' in window
+			if (isTauri) {
+				const os = await import('@tauri-apps/plugin-os')
+				setPlatform(os.platform())
+			}
+		}
+		initSettings()
 	}, [])
 
 	// Check for shortcut conflicts when input changes

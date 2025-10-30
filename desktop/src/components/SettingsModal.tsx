@@ -1,16 +1,30 @@
 import { ModifyState, cx } from '~/lib/utils'
 import SettingsPage from '~/pages/settings/Page'
-import * as os from '@tauri-apps/plugin-os'
+import { useEffect, useState } from 'react'
 
 interface SettingsModalProps {
 	visible: boolean
 	setVisible: ModifyState<boolean>
 }
 export default function SettingsModal({ visible, setVisible }: SettingsModalProps) {
+	const [platform, setPlatform] = useState<string | null>(null)
+
+	useEffect(() => {
+		const detectPlatform = async () => {
+			const isTauri = '__TAURI__' in window
+			if (isTauri) {
+				const os = await import('@tauri-apps/plugin-os')
+				setPlatform(os.platform())
+			}
+		}
+		detectPlatform()
+	}, [])
+
 	if (visible) {
+		// Don't use transparent background on Linux since the backdrop doesn't work!
+		const isDarkTransparent = platform === null ? false : platform !== 'linux'
 		return (
-			// Don't use transparent background on Linux since the backdrop doesn't work!
-			<div className={cx('modal modal-open backdrop-blur-3xl !bg-base-100 overflow-y-auto', os.platform() != 'linux' && 'dark:!bg-transparent')}>
+			<div className={cx('modal modal-open backdrop-blur-3xl !bg-base-100 overflow-y-auto', isDarkTransparent && 'dark:!bg-transparent')}>
 				<SettingsPage setVisible={setVisible} />
 			</div>
 		)
