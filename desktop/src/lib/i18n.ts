@@ -3,6 +3,7 @@ import * as fs from '@tauri-apps/plugin-fs'
 import { locale } from '@tauri-apps/plugin-os'
 import i18n, { LanguageDetectorAsyncModule } from 'i18next'
 import { initReactI18next } from 'react-i18next/initReactI18next'
+import { isTauri } from '@tauri-apps/api/core'
 
 // See src-tauri/locales/ for the list of supported languages
 // Please keep the list sorted alphabetically
@@ -38,22 +39,33 @@ const LanguageDetector: LanguageDetectorAsyncModule = {
 	type: 'languageDetector',
 	async: true, // If this is set to true, your detect function receives a callback function that you should call with your language, useful to retrieve your language stored in AsyncStorage for example
 	detect: (callback) => {
-		locale().then((detectedLocale) => {
+		// Only try to detect system locale in Tauri context
+		if (isTauri()) {
+			locale().then((detectedLocale) => {
+				const prefs_language = localStorage.getItem('prefs_display_language')
+				if (prefs_language) {
+					const locale = JSON.parse(prefs_language)
+					callback(locale)
+				} else {
+					if (detectedLocale) {
+						callback(detectedLocale)
+					}
+				}
+			})
+		} else {
+			// In browser mode, use stored preference or default
 			const prefs_language = localStorage.getItem('prefs_display_language')
 			if (prefs_language) {
 				const locale = JSON.parse(prefs_language)
 				callback(locale)
 			} else {
-				if (detectedLocale) {
-					callback(detectedLocale)
-				}
+				callback('en-US')
 			}
-		})
+		}
 	},
 }
 
-// Check if we're running in Tauri or browser
-const isTauri = '__TAURI__' in window
+// Note: isTauri function is imported from @tauri-apps/api/core above
 
 // Custom backend to load translations
 const loadResources = async (language: string) => {
