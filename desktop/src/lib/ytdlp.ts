@@ -20,6 +20,9 @@ async function getPlatformName() {
 }
 
 async function getBinaryPath() {
+	if (!isTauri()) {
+		return ''
+	}
 	const platformName = await getPlatformName()
 	const { name } = ytDlpConfig[platformName as keyof typeof ytDlpConfig]
 	const localDataPath = await path.appLocalDataDir()

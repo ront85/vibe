@@ -69,6 +69,9 @@ export default function DictationSettings({}: DictationSettingsProps) {
 	}, [shortcutInput])
 
 	async function loadAudioDevices() {
+		if (!isTauri()) {
+			return
+		}
 		try {
 			setLoadingDevices(true)
 			const devices = await invoke<AudioDevice[]>('get_audio_devices')

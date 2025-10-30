@@ -36,43 +36,45 @@ export function getI18nLanguageName() {
 
 const LanguageDetector: LanguageDetectorAsyncModule = {
 	type: 'languageDetector',
-	async: true, // If this is set to true, your detect function receives a callback function that you should call with your language, useful to retrieve your language stored in AsyncStorage for example
-	detect: (callback) => {
-		// Only try to detect system locale in Tauri context
-		if (isTauri()) {
-			// Dynamically import Tauri API to avoid loading in browser mode
-			import('@tauri-apps/plugin-os')
-				.then((osModule) => osModule.locale())
-				.then((detectedLocale) => {
-					const prefs_language = localStorage.getItem('prefs_display_language')
-					if (prefs_language) {
-						const locale = JSON.parse(prefs_language)
-						callback(locale)
-					} else {
-						if (detectedLocale) {
-							callback(detectedLocale)
-						}
-					}
-				})
-				.catch(() => {
-					// Fallback if locale detection fails
-					const prefs_language = localStorage.getItem('prefs_display_language')
-					if (prefs_language) {
-						const locale = JSON.parse(prefs_language)
-						callback(locale)
-					} else {
-						callback('en-US')
-					}
-				})
-		} else {
-			// In browser mode, use stored preference or default
+	async: true,
+	detect: async (callback) => {
+		try {
+			// First check localStorage for saved preference
 			const prefs_language = localStorage.getItem('prefs_display_language')
 			if (prefs_language) {
-				const locale = JSON.parse(prefs_language)
-				callback(locale)
-			} else {
-				callback('en-US')
+				const savedLocale = JSON.parse(prefs_language)
+				if (supportedLanguageKeys.includes(savedLocale)) {
+					callback(savedLocale)
+					return
+				}
 			}
+
+			// Try to detect from Tauri system locale
+			if (isTauri()) {
+				try {
+					const osModule = await import('@tauri-apps/plugin-os')
+					const osLocale = await osModule.locale()
+					if (osLocale && supportedLanguageKeys.includes(osLocale)) {
+						callback(osLocale)
+						return
+					}
+				} catch (error) {
+					console.warn('Failed to detect Tauri system locale:', error)
+				}
+			}
+
+			// Fallback to browser locale
+			const browserLocale = navigator.language
+			if (browserLocale && supportedLanguageKeys.includes(browserLocale)) {
+				callback(browserLocale)
+				return
+			}
+
+			// Final fallback
+			callback('en-US')
+		} catch (error) {
+			console.error('Language detection error:', error)
+			callback('en-US')
 		}
 	},
 }
@@ -132,29 +134,29 @@ const loadResources = async (language: string) => {
 }
 
 const i18nInitPromise = (async () => {
-	// Detect language
-	const prefs_language = localStorage.getItem('prefs_display_language')
+	// Detect language using custom logic (same as detector, but synchronously to use in init)
 	let detectedLanguage = 'en-US'
 
+	const prefs_language = localStorage.getItem('prefs_display_language')
 	if (prefs_language) {
-		detectedLanguage = JSON.parse(prefs_language)
+		const savedLocale = JSON.parse(prefs_language)
+		if (supportedLanguageKeys.includes(savedLocale)) {
+			detectedLanguage = savedLocale
+		}
 	} else if (isTauri()) {
-		// Use Tauri API in production
 		try {
-			const { locale } = await import('@tauri-apps/plugin-os')
-			const osLocale = await locale()
+			const osModule = await import('@tauri-apps/plugin-os')
+			const osLocale = await osModule.locale()
 			if (osLocale && supportedLanguageKeys.includes(osLocale)) {
 				detectedLanguage = osLocale
 			}
 		} catch (error) {
-			// Fallback if locale detection fails
-			const browserLocale = navigator.language
-			if (browserLocale && supportedLanguageKeys.includes(browserLocale)) {
-				detectedLanguage = browserLocale
-			}
+			console.warn('Failed to detect Tauri system locale:', error)
 		}
-	} else {
-		// Use browser API in development
+	}
+
+	if (detectedLanguage === 'en-US' && !localStorage.getItem('prefs_display_language')) {
+		// Only check browser locale if no preference and not Tauri
 		const browserLocale = navigator.language
 		if (browserLocale && supportedLanguageKeys.includes(browserLocale)) {
 			detectedLanguage = browserLocale
@@ -164,40 +166,60 @@ const i18nInitPromise = (async () => {
 	console.log('Detected language:', detectedLanguage)
 	console.log('Running in:', isTauri() ? 'Tauri mode' : 'Browser mode')
 
-	// Load translations for detected language
+	// Load resources for detected language
 	const resources = await loadResources(detectedLanguage)
 
+	// Fallback to en-US if detection failed
 	if (!resources) {
 		console.warn(`Failed to load ${detectedLanguage}, falling back to en-US`)
 		const fallbackResources = await loadResources('en-US')
 		if (!fallbackResources) {
 			throw new Error('Failed to load fallback translations')
 		}
+		detectedLanguage = 'en-US'
+	}
 
-		return i18n.use(initReactI18next).init({
-			lng: 'en-US',
+	console.log('Loaded resources for', detectedLanguage, ':', resources)
+
+	// Initialize i18n with the properly loaded resources
+	const en_US_Resources = resources && detectedLanguage === 'en-US' ? resources : await loadResources('en-US')
+	console.log('EN-US resources:', en_US_Resources)
+	console.log('Detected resources:', resources)
+
+	// Don't use the detector plugin during init - just initialize with loaded resources
+	// We'll handle language switching manually via changeLanguage()
+	await i18n
+		.use(initReactI18next)
+		.init({
+			lng: detectedLanguage,
 			fallbackLng: 'en-US',
+			// IMPORTANT: Set nsSeparator to '.' so that 't("common.app-title")' is parsed as
+			// namespace "common", key "app-title" (NOT key "common.app-title" in default namespace)
+			nsSeparator: '.',
+			keySeparator: false,  // Don't use separator for nested keys within a namespace
+			ns: ['common', 'language'],
+			defaultNS: 'common',
 			debug: true,
 			resources: {
-				'en-US': fallbackResources
+				[detectedLanguage]: resources!,
+				'en-US': en_US_Resources!,
 			},
 			interpolation: {
 				escapeValue: false,
 			},
 		})
-	}
 
-	return i18n.use(initReactI18next).init({
-		lng: detectedLanguage,
-		fallbackLng: 'en-US',
-		debug: true,
-		resources: {
-			[detectedLanguage]: resources
-		},
-		interpolation: {
-			escapeValue: false,
-		},
-	})
+	console.log('i18n initialized with language:', i18n.language)
+	console.log('i18n has common bundle for en-US:', i18n.hasResourceBundle('en-US', 'common'))
+	console.log('i18n has common bundle for', detectedLanguage, ':', i18n.hasResourceBundle(detectedLanguage, 'common'))
+
+	// Debug: check the actual content
+	const commonBundle = i18n.getResourceBundle('en-US', 'common')
+	console.log('Common bundle keys (first 5):', Object.keys(commonBundle || {}).slice(0, 5))
+	console.log('Has app-title in common:', commonBundle && 'app-title' in commonBundle)
+	console.log('Value of app-title:', commonBundle?.['app-title'])
+
+	return i18n
 })()
 
 // Helper to dynamically load additional languages

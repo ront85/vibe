@@ -8,7 +8,7 @@ import { ModelOptions as IModelOptions, usePreferenceProvider } from '~/provider
 import { useToastProvider } from '~/providers/Toast'
 import { listen } from '@tauri-apps/api/event'
 import { ask } from '@tauri-apps/plugin-dialog'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import * as config from '~/lib/config'
 import { path } from '@tauri-apps/api'
 import { exists } from '@tauri-apps/plugin-fs'
@@ -47,6 +47,9 @@ export default function ModelOptions({ options, setOptions }: ParamsProps) {
 	}, [preference.recognizeSpeakers, options.word_timestamps])
 
 	async function handleProgressEvents() {
+		if (!isTauri()) {
+			return
+		}
 		listen<[number, number]>('download_progress', (event) => {
 			// event.event is the event name (useful if you want to use a single callback fn for multiple event types)
 			// event.payload is the payload object
@@ -57,6 +60,9 @@ export default function ModelOptions({ options, setOptions }: ParamsProps) {
 	}
 
 	async function askOrEnableSpeakerRecognition() {
+		if (!isTauri()) {
+			return
+		}
 		const modelsFolder = await invoke<string>('get_models_folder')
 		const embedModelPath = await path.join(modelsFolder, config.embeddingModelFilename)
 		const segmentModelPath = await path.join(modelsFolder, config.segmentModelFilename)

@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { ask, open } from '@tauri-apps/plugin-dialog'
 import * as shell from '@tauri-apps/plugin-shell'
 import { useEffect, useRef, useState } from 'react'
@@ -14,6 +14,9 @@ import * as clipboard from '@tauri-apps/plugin-clipboard-manager'
 import { collectLogs, getPrettyVersion } from '~/lib/logs'
 
 async function openModelPath() {
+	if (!isTauri()) {
+		return
+	}
 	let dst = await invoke<string>('get_models_folder')
 	invoke('open_path', { path: dst })
 }
@@ -23,6 +26,9 @@ async function openModelsUrl() {
 }
 
 async function reportIssue() {
+	if (!isTauri()) {
+		return
+	}
 	try {
 		let info = await collectLogs()
 
@@ -57,14 +63,23 @@ ${filteredLogs}
 }
 
 async function revealLogs() {
+	if (!isTauri()) {
+		return
+	}
 	await invoke<string>('show_log_path')
 }
 
 async function revealTemp() {
+	if (!isTauri()) {
+		return
+	}
 	await invoke<string>('show_temp_path')
 }
 
 async function copyLogs() {
+	if (!isTauri()) {
+		return
+	}
 	const logs = await invoke<string>('get_logs')
 	const templated = `<details>
 <summary>logs</summary>
@@ -112,6 +127,9 @@ export function viewModel() {
 	}
 
 	async function loadModels() {
+		if (!isTauri()) {
+			return
+		}
 		const modelsFolder = await invoke<string>('get_models_folder')
 		const entries = await ls(modelsFolder)
 		const found = entries.filter((e) => e.name?.endsWith('.bin'))
@@ -119,6 +137,9 @@ export function viewModel() {
 	}
 
 	async function getDefaultModel() {
+		if (!isTauri()) {
+			return
+		}
 		if (!preference.modelPath) {
 			const modelsFolder = await invoke<string>('get_models_folder')
 
@@ -143,6 +164,9 @@ export function viewModel() {
 	}
 
 	async function onWindowFocus() {
+		if (!isTauri()) {
+			return
+		}
 		listenersRef.current.push(await listen('tauri://focus', loadModels))
 	}
 

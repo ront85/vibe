@@ -1,6 +1,6 @@
 import '@fontsource/roboto'
 import { event, path } from '@tauri-apps/api'
-import { convertFileSrc, invoke } from '@tauri-apps/api/core'
+import { convertFileSrc, invoke, isTauri } from '@tauri-apps/api/core'
 import { emit, listen } from '@tauri-apps/api/event'
 import { basename } from '@tauri-apps/api/path'
 import * as webview from '@tauri-apps/api/webviewWindow'
@@ -73,6 +73,9 @@ export function viewModel() {
 	}
 
 	async function checkIfCrashedRecently() {
+		if (!isTauri()) {
+			return
+		}
 		const isCrashed = await invoke<boolean>('is_crashed_recently')
 		if (isCrashed) {
 			preference.setUseGpu(false)
@@ -167,6 +170,9 @@ export function viewModel() {
 	}
 
 	async function handleNewSegment() {
+		if (!isTauri()) {
+			return
+		}
 		await listen('transcribe_progress', (event) => {
 			const value = event.payload as number
 			if (value >= 0 && value <= 100) {
@@ -180,6 +186,9 @@ export function viewModel() {
 	}
 
 	async function handleRecordFinish() {
+		if (!isTauri()) {
+			return
+		}
 		await listen<{ path: string; name: string }>('record_finish', (event) => {
 			const { name, path } = event.payload
 			preference.setHomeTabIndex(1)
@@ -190,6 +199,9 @@ export function viewModel() {
 	}
 
 	async function loadAudioDevices() {
+		if (!isTauri()) {
+			return
+		}
 		let newDevices = await invoke<AudioDevice[]>('get_audio_devices')
 		const defaultInput = newDevices.find((d) => d.isDefault && d.isInput)
 		const defaultOutput = newDevices.find((d) => d.isDefault && !d.isInput)
@@ -233,6 +245,9 @@ export function viewModel() {
 	}
 
 	async function checkModelExists() {
+		if (!isTauri()) {
+			return
+		}
 		try {
 			const configPath = await invoke<string>('get_models_folder')
 			const entries = await ls(configPath)
@@ -256,6 +271,9 @@ export function viewModel() {
 	}
 
 	async function handleDrop() {
+		if (!isTauri()) {
+			return
+		}
 		listen<{ paths: string[] }>('tauri://drag-drop', async (event) => {
 			const newFiles: NamedPath[] = []
 			for (const path of event.payload.paths) {
@@ -270,6 +288,9 @@ export function viewModel() {
 	}
 
 	async function checkVulkanOk() {
+		if (!isTauri()) {
+			return
+		}
 		try {
 			await invoke('check_vulkan')
 		} catch (error) {
@@ -285,6 +306,9 @@ export function viewModel() {
 	}
 
 	async function CheckCpuAndInit() {
+		if (!isTauri()) {
+			return
+		}
 		const features = await getX86Features()
 		if (features) {
 			const unsupported = Object.entries(features || {})

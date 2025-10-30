@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 
 interface X86feature {
 	enabled: boolean
@@ -12,5 +12,8 @@ export interface X86features {
 	f16c: X86feature
 }
 export async function getX86Features() {
+	if (!isTauri()) {
+		return null
+	}
 	return await invoke<X86features | null>('get_x86_features')
 }
