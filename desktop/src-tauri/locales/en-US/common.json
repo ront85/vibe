@@ -160,5 +160,10 @@
 	"days-ago": "{{count}} days ago",
 	"days-ago_one": "1 day ago",
 	"days-ago_other": "{{count}} days ago",
-	"delete": "Delete"
+	"delete": "Delete",
+	"error-title": "An Error Occurred",
+	"modal-error-body": "An unexpected error happened. Please try refreshing the page.",
+	"modal-close": "Close",
+	"reset-app": "Reset App",
+	"report-issue": "Report Issue"
 }
