@@ -32,6 +32,11 @@ export default function DropModal() {
 	const [platform, setPlatform] = useState<Platform>('macos')
 
 	async function handleDrops() {
+		// Only set up drag listeners in Tauri context
+		if (!isTauri()) {
+			return
+		}
+
 		// Add blur
 		listeners.current.push(
 			await event.listen('tauri://drag-enter', () => {

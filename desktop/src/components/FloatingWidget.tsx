@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { listen } from '@tauri-apps/api/event'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import WaveformBars from './WaveformBars'
 import { useTranslation } from 'react-i18next'
 
@@ -37,6 +37,11 @@ export default function FloatingWidget({ enabled, shortcut }: FloatingWidgetProp
 	// Listen to backend state changes
 	useEffect(() => {
 		const setupListeners = async () => {
+			// Only set up listeners in Tauri context
+			if (!isTauri()) {
+				return
+			}
+
 			// Listen for dictation state changes
 			const unlistenState = await listen<string>('dictation_state_change', (event) => {
 				const newState = event.payload as DictationState
@@ -65,6 +70,9 @@ export default function FloatingWidget({ enabled, shortcut }: FloatingWidgetProp
 
 	const handleClick = async () => {
 		try {
+			if (!isTauri()) {
+				return
+			}
 			if (state === 'idle') {
 				// Start recording
 				await invoke('start_dictation')

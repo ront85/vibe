@@ -5,7 +5,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ErrorModalContext } from './ErrorModal'
 import { ModifyState } from '~/lib/utils'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-shell'
 import { latestReleaseURL } from '~/lib/config'
 // Define the context type
@@ -49,8 +49,11 @@ export function UpdaterProvider({ children }: { children: React.ReactNode }) {
 	}, [partSize])
 
 	useEffect(() => {
-		// Check for new updates
+		// Check for new updates (only in Tauri context)
 		async function checkForUpdates() {
+			if (!isTauri()) {
+				return
+			}
 			try {
 				const newUpdate = await checkUpdate()
 				if (newUpdate) {
