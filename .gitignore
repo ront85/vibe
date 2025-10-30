@@ -17,6 +17,7 @@ ffmpeg/
 openblas/
 *.7z
 .env
+.envrc.local
 !samples/*
 vulkan_sdk/
 vulkan_runtime/

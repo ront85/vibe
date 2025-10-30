@@ -1,5 +1,7 @@
+#[allow(deprecated)]
 use cocoa::appkit::{NSApp, NSApplication, NSApplicationActivationPolicy::*};
 
+#[allow(deprecated)]
 pub fn set_dock_visible(visible: bool) {
     let policy = if visible {
         NSApplicationActivationPolicyRegular

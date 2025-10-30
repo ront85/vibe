@@ -1,13 +1,28 @@
-import { platform } from '@tauri-apps/plugin-os'
 import { ytDlpConfig } from './config'
 import * as fs from '@tauri-apps/plugin-fs'
 import * as path from '@tauri-apps/api/path'
 import { invoke } from '@tauri-apps/api/core'
 
-const platformName = platform()
-const { url, name } = ytDlpConfig[platformName as keyof typeof ytDlpConfig]
+let cachedPlatformName: string | null = null
+
+async function getPlatformName() {
+	if (cachedPlatformName === null) {
+		// Only load platform when in Tauri context
+		const isTauri = '__TAURI__' in window
+		if (isTauri) {
+			const { platform } = await import('@tauri-apps/plugin-os')
+			cachedPlatformName = platform()
+		} else {
+			// In browser mode, default to linux
+			cachedPlatformName = 'linux'
+		}
+	}
+	return cachedPlatformName
+}
 
 async function getBinaryPath() {
+	const platformName = await getPlatformName()
+	const { name } = ytDlpConfig[platformName as keyof typeof ytDlpConfig]
 	const localDataPath = await path.appLocalDataDir()
 	const binaryPath = await path.join(localDataPath, name)
 	return binaryPath
@@ -19,6 +34,8 @@ export async function exists() {
 }
 
 export async function downloadYtDlp() {
+	const platformName = await getPlatformName()
+	const { url } = ytDlpConfig[platformName as keyof typeof ytDlpConfig]
 	const binaryPath = await getBinaryPath()
 	await invoke('download_file', { url, path: binaryPath })
 }

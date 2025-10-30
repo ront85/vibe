@@ -5,7 +5,11 @@ mod cleaner;
 mod cli;
 mod cmd;
 mod config;
+mod dictation_settings;
+mod keyboard_hooks;
 mod panic_hook;
+mod permissions;
+mod text_input;
 
 #[cfg(feature = "server")]
 mod server;
@@ -64,6 +68,7 @@ fn main() -> Result<()> {
         .plugin(tauri_plugin_updater::Builder::default().build())
         .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_keepawake::init())
         .invoke_handler(tauri::generate_handler![
             cmd::download_file,
@@ -96,6 +101,19 @@ fn main() -> Result<()> {
             cmd::ytdlp::get_temp_path,
             cmd::is_crashed_recently,
             cmd::rename_crash_file,
+            cmd::dictation::paste_text,
+            cmd::dictation::get_active_app,
+            cmd::dictation::can_paste,
+            cmd::dictation::get_dictation_history,
+            cmd::dictation::search_dictation_history,
+            cmd::dictation::add_dictation_history,
+            cmd::dictation::update_dictation_entry,
+            cmd::dictation::delete_dictation_entry,
+            cmd::dictation::cleanup_old_history,
+            cmd::permissions::check_dictation_accessibility_permission,
+            cmd::permissions::check_dictation_microphone_permission,
+            cmd::permissions::get_dictation_accessibility_instructions,
+            cmd::permissions::get_dictation_microphone_instructions,
             #[cfg(windows)]
             cmd::set_high_gpu_preference
         ])

@@ -1,5 +1,9 @@
 pub mod audio;
+pub mod audio_capture;
 pub mod config;
+pub mod dictation;
+pub mod dictation_history;
+pub mod dictation_transcribe;
 pub mod downloader;
 pub mod transcribe;
 pub mod transcript;

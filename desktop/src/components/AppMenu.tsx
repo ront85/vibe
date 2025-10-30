@@ -1,51 +1,68 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import * as dialog from '@tauri-apps/plugin-dialog'
 import { useNavigate } from 'react-router-dom'
-import { ReactComponent as EllipsisIcon } from '~/icons/ellipsis.svg'
-import { ReactComponent as IndicatorIcon } from '~/icons/update-indicator.svg'
-import { cx } from '~/lib/utils'
+import { useTranslation } from 'react-i18next'
+import { ReactComponent as SettingsIcon } from '~/icons/wrench.svg'
+import { ReactComponent as BatchIcon } from '~/icons/file.svg'
+import { ReactComponent as HistoryIcon } from '~/icons/link.svg'
 
 interface AppMenuProps {
-	availableUpdate: boolean
-	updateApp: () => void
 	onClickSettings: () => void
+	availableUpdate?: string
+	updateApp?: () => void
 }
 
-export default function AppMenu({ availableUpdate, updateApp, onClickSettings }: AppMenuProps) {
-	const { t } = useTranslation()
-	const [open, setOpen] = useState(false)
+export default function AppMenu({ onClickSettings, availableUpdate, updateApp }: AppMenuProps) {
 	const navigate = useNavigate()
+	const { t } = useTranslation()
+
+	async function onClickUpdate() {
+		if (!availableUpdate || !updateApp) return
+		const confirmation = await dialog.confirm(`${t('common.ask-for-update-body', { version: availableUpdate })}`, {
+			title: t('common.ask-for-update-title'),
+			kind: 'info',
+			okLabel: t('common.confirm-update'),
+			cancelLabel: t('common.cancel-update'),
+		})
+
+		if (confirmation) {
+			updateApp()
+		}
+	}
 
 	return (
-		<div
-			onMouseEnter={() => {
-				if (!open) {
-					setOpen(true)
-				}
-			}}
-			onMouseLeave={() => {
-				if (open) {
-					setOpen(false)
-				}
-			}}
-			onMouseDown={() => setOpen(!open)}
-			className={cx('dropdown absolute left-0 top-0', open && 'dropdown-open')}
-			dir="ltr">
-			<EllipsisIcon />
-			{availableUpdate && <IndicatorIcon className="w-2 h-2 absolute -top-0.5 left-3" />}
-			<div tabIndex={0} className="dropdown-content -translate-x-0.5 -translate-y-1.5 z-[1] menu p-1.5 bg-base-300 rounded-box w-52">
-				<li onMouseDown={() => onClickSettings()}>
-					<a>{t('common.settings')}</a>
-				</li>
-				<li onMouseDown={() => navigate(-1)}>
-					<a>{t('common.back')}</a>
-				</li>
+		<div className="absolute top-0 end-0 dropdown dropdown-end">
+			<button tabIndex={0} role="button" className="btn btn-ghost btn-circle">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block h-5 w-5 stroke-current">
+					<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"></path>
+				</svg>
+			</button>
+			<ul tabIndex={0} className="menu dropdown-content z-[1] p-2 shadow bg-base-200 rounded-box w-52 mt-3 gap-1">
 				{availableUpdate && (
-					<li onMouseDown={() => updateApp()}>
-						<a className="bg-primary">{t('common.update-version')}</a>
+					<li>
+						<button onClick={onClickUpdate} className="btn btn-primary">
+							{t('common.update-available')}
+						</button>
 					</li>
 				)}
-			</div>
+				<li>
+					<button onMouseDown={() => navigate('/batch')}>
+						<BatchIcon className="h-[18px] w-[18px]" />
+						{t('common.transcribe-folder')}
+					</button>
+				</li>
+				<li>
+					<button onMouseDown={() => navigate('/history')}>
+						<HistoryIcon className="h-[18px] w-[18px]" />
+						{t('common.dictation-history')}
+					</button>
+				</li>
+				<li>
+					<button onMouseDown={onClickSettings}>
+						<SettingsIcon className="h-[18px] w-[18px]" />
+						{t('common.settings')}
+					</button>
+				</li>
+			</ul>
 		</div>
 	)
 }

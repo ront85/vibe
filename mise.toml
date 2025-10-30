@@ -1,0 +1,9 @@
+[tools]
+# Rust toolchain - latest stable to support edition2024 feature
+rust = "latest"
+# Bun for JavaScript/TypeScript package management
+bun = "1.0"
+
+[env]
+# Set environment variables for the project
+RUST_LOG = "info"

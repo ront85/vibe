@@ -2,7 +2,6 @@ import { resolveResource } from '@tauri-apps/api/path'
 import * as fs from '@tauri-apps/plugin-fs'
 import { locale } from '@tauri-apps/plugin-os'
 import i18n, { LanguageDetectorAsyncModule } from 'i18next'
-import resourcesToBackend from 'i18next-resources-to-backend'
 import { initReactI18next } from 'react-i18next/initReactI18next'
 
 // See src-tauri/locales/ for the list of supported languages
@@ -53,18 +52,25 @@ const LanguageDetector: LanguageDetectorAsyncModule = {
 	},
 }
 
-i18n.use(LanguageDetector)
-	.use(initReactI18next)
-	.use(
-		resourcesToBackend(async (language: string) => {
-			if (!supportedLanguageKeys.includes(language)) {
-				return
-			}
+// Check if we're running in Tauri or browser
+const isTauri = '__TAURI__' in window
+
+// Custom backend to load translations
+const loadResources = async (language: string) => {
+	if (!supportedLanguageKeys.includes(language)) {
+		return null
+	}
+
+	try {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const translations: any = {}
+
+		if (isTauri) {
+			// Production mode: Load from Tauri bundled resources
 			const resourcePath = `./locales/${language}`
 			const languageDirectory = await resolveResource(resourcePath)
 			const files = await fs.readDir(languageDirectory)
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const translations: any = {}
+
 			await Promise.all(
 				files.map(async (file) => {
 					const filePath = `${languageDirectory}/${file.name}`
@@ -73,14 +79,110 @@ i18n.use(LanguageDetector)
 					translations[namespace] = JSON.parse(content)
 				})
 			)
-			return translations
+		} else {
+			// Development mode: Load from HTTP
+			const namespaces = ['common', 'language']
+			await Promise.all(
+				namespaces.map(async (namespace) => {
+					const response = await fetch(`/locales/${language}/${namespace}.json`)
+					if (response.ok) {
+						translations[namespace] = await response.json()
+					} else {
+						console.error(`Failed to fetch ${namespace} for ${language}`)
+					}
+				})
+			)
+		}
+
+		return translations
+	} catch (error) {
+		console.error(`Failed to load translations for ${language}:`, error)
+		return null
+	}
+}
+
+const i18nInitPromise = (async () => {
+	// Detect language
+	const prefs_language = localStorage.getItem('prefs_display_language')
+	let detectedLanguage = 'en-US'
+
+	if (prefs_language) {
+		detectedLanguage = JSON.parse(prefs_language)
+	} else if (isTauri) {
+		// Use Tauri API in production
+		const osLocale = await locale()
+		if (osLocale && supportedLanguageKeys.includes(osLocale)) {
+			detectedLanguage = osLocale
+		}
+	} else {
+		// Use browser API in development
+		const browserLocale = navigator.language
+		if (browserLocale && supportedLanguageKeys.includes(browserLocale)) {
+			detectedLanguage = browserLocale
+		}
+	}
+
+	console.log('Detected language:', detectedLanguage)
+	console.log('Running in:', isTauri ? 'Tauri mode' : 'Browser mode')
+
+	// Load translations for detected language
+	const resources = await loadResources(detectedLanguage)
+
+	if (!resources) {
+		console.warn(`Failed to load ${detectedLanguage}, falling back to en-US`)
+		const fallbackResources = await loadResources('en-US')
+		if (!fallbackResources) {
+			throw new Error('Failed to load fallback translations')
+		}
+
+		return i18n.use(initReactI18next).init({
+			lng: 'en-US',
+			fallbackLng: 'en-US',
+			debug: true,
+			resources: {
+				'en-US': fallbackResources
+			},
+			interpolation: {
+				escapeValue: false,
+			},
 		})
-	)
-	.init({
-		debug: false,
+	}
+
+	return i18n.use(initReactI18next).init({
+		lng: detectedLanguage,
 		fallbackLng: 'en-US',
+		debug: true,
+		resources: {
+			[detectedLanguage]: resources
+		},
 		interpolation: {
-			escapeValue: false, // not needed for react as it escapes by default
+			escapeValue: false,
 		},
 	})
+})()
+
+// Helper to dynamically load additional languages
+export async function changeLanguage(language: string) {
+	if (!supportedLanguageKeys.includes(language)) {
+		console.error(`Language ${language} is not supported`)
+		return
+	}
+
+	// Check if already loaded
+	if (i18n.hasResourceBundle(language, 'common')) {
+		await i18n.changeLanguage(language)
+		return
+	}
+
+	// Load new language
+	const resources = await loadResources(language)
+	if (resources) {
+		Object.keys(resources).forEach(namespace => {
+			i18n.addResourceBundle(language, namespace, resources[namespace])
+		})
+		await i18n.changeLanguage(language)
+	}
+}
+
+export { i18nInitPromise }
 export default i18n

@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "predev": "mkdir -p public/locales && cp -r src-tauri/locales/* public/locales/",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

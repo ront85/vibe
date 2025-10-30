@@ -90,7 +90,7 @@ pub fn create_normalized_audio(source: PathBuf, additional_ffmpeg_args: Option<V
     Ok(out_path)
 }
 
-fn setup_params(options: &TranscribeOptions) -> FullParams {
+pub fn setup_params(options: &TranscribeOptions) -> FullParams<'_, '_> {
     let mut beam_size_or_best_of = options.sampling_bestof_or_beam_size.unwrap_or(5);
     if beam_size_or_best_of < 1 {
         beam_size_or_best_of = 5;

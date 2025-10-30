@@ -16,6 +16,7 @@ import * as config from '~/lib/config'
 import { supportedLanguages } from '~/lib/i18n'
 import { ModifyState, cx } from '~/lib/utils'
 import { viewModel } from './viewModel'
+import DictationSettings from './DictationSettings'
 import * as os from '@tauri-apps/plugin-os'
 import { useEffect, useState } from 'react'
 
@@ -106,6 +107,12 @@ export default function SettingsPage({ setVisible }: SettingsPageProps) {
 					/>
 				</label>
 			</div>
+
+			{/* Dictation Settings Section */}
+			<div className="label mt-10">
+				<span className="label-text">{t('common.dictation')}</span>
+			</div>
+			<DictationSettings />
 
 			<div className="label mt-10">
 				<span className="label-text flex items-center gap-1">
