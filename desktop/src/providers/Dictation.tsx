@@ -1,5 +1,6 @@
 import { ReactNode, createContext, useContext, useState, useEffect } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
+import { isTauri } from '@tauri-apps/api/core'
 import { ModifyState } from '~/lib/utils'
 
 export interface DictationSettings {
@@ -36,8 +37,7 @@ export function DictationProvider({ children }: { children: ReactNode }) {
 	// Detect platform and set default shortcut
 	useEffect(() => {
 		const detectPlatform = async () => {
-			const isTauri = '__TAURI__' in window
-			if (isTauri) {
+			if (isTauri()) {
 				const { platform } = await import('@tauri-apps/plugin-os')
 				const platformName = platform()
 				if (platformName === 'macos') {

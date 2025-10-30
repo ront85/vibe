@@ -1,5 +1,6 @@
 import * as shell from '@tauri-apps/plugin-shell'
 import { useTranslation } from 'react-i18next'
+import { isTauri } from '@tauri-apps/api/core'
 import { InfoTooltip } from '~/components/InfoTooltip'
 import { ReactComponent as ChevronLeftIcon } from '~/icons/chevron-left.svg'
 import { ReactComponent as ChevronRightIcon } from '~/icons/chevron-right.svg'
@@ -32,8 +33,7 @@ export default function SettingsPage({ setVisible }: SettingsPageProps) {
 	const [platform, setPlatform] = useState<Platform | null>(null)
 
 	async function getPlatform() {
-		const isTauri = '__TAURI__' in window
-		if (isTauri) {
+		if (isTauri()) {
 			const os = await import('@tauri-apps/plugin-os')
 			setPlatform(os.platform())
 		}

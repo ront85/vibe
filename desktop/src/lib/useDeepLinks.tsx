@@ -4,6 +4,7 @@ import { ask } from '@tauri-apps/plugin-dialog'
 import * as config from '~/lib/config'
 import { useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
+import { isTauri } from '@tauri-apps/api/core'
 
 interface UseDeepLinksProps {
 	setFiles: ModifyState<NamedPath[]>
@@ -35,8 +36,7 @@ export function useDeepLinks({ setFiles }: UseDeepLinksProps) {
 	}
 
 	async function handleArgv() {
-		const isTauri = '__TAURI__' in window
-		if (!isTauri) {
+		if (!isTauri()) {
 			return
 		}
 		const { invoke } = await import('@tauri-apps/api/core')
@@ -45,8 +45,7 @@ export function useDeepLinks({ setFiles }: UseDeepLinksProps) {
 	}
 
 	async function handleDeepLinks() {
-		const isTauri = '__TAURI__' in window
-		if (!isTauri) {
+		if (!isTauri()) {
 			return
 		}
 		const { onOpenUrl } = await import('@tauri-apps/plugin-deep-link')

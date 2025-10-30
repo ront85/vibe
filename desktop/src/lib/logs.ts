@@ -1,10 +1,9 @@
 import { app } from '@tauri-apps/api'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { ls } from './utils'
 
 export async function getPrettyVersion() {
-	const isTauri = '__TAURI__' in window
-	if (!isTauri) {
+	if (!isTauri()) {
 		return 'Vibe (browser mode)'
 	}
 
@@ -36,8 +35,7 @@ export async function getPrettyVersion() {
 }
 
 export async function getAppInfo() {
-	const isTauri = '__TAURI__' in window
-	if (!isTauri) {
+	if (!isTauri()) {
 		return 'App Info: Browser mode (no Tauri context)'
 	}
 

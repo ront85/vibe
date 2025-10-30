@@ -2,6 +2,7 @@ import * as event from '@tauri-apps/api/event'
 import { basename } from '@tauri-apps/api/path'
 import * as webview from '@tauri-apps/api/webview'
 import { useEffect, useRef, useState } from 'react'
+import { isTauri } from '@tauri-apps/api/core'
 import { ReactComponent as DocumentIcon } from '~/icons/document.svg'
 import { cx, formatLongString, validPath } from '~/lib/utils'
 
@@ -75,8 +76,7 @@ export default function DropModal() {
 	useEffect(() => {
 		const initDrops = async () => {
 			await handleDrops()
-			const isTauri = '__TAURI__' in window
-			if (isTauri) {
+			if (isTauri()) {
 				const os = await import('@tauri-apps/plugin-os')
 				setPlatform(os.platform())
 			}

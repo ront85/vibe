@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { InfoTooltip } from '~/components/InfoTooltip'
@@ -55,8 +55,7 @@ export default function DictationSettings({}: DictationSettingsProps) {
 	useEffect(() => {
 		const initSettings = async () => {
 			await loadAudioDevices()
-			const isTauri = '__TAURI__' in window
-			if (isTauri) {
+			if (isTauri()) {
 				const os = await import('@tauri-apps/plugin-os')
 				setPlatform(os.platform())
 			}

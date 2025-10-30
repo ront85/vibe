@@ -1,15 +1,14 @@
 import { ytDlpConfig } from './config'
 import * as fs from '@tauri-apps/plugin-fs'
 import * as path from '@tauri-apps/api/path'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 
 let cachedPlatformName: string | null = null
 
 async function getPlatformName() {
 	if (cachedPlatformName === null) {
 		// Only load platform when in Tauri context
-		const isTauri = '__TAURI__' in window
-		if (isTauri) {
+		if (isTauri()) {
 			const { platform } = await import('@tauri-apps/plugin-os')
 			cachedPlatformName = platform()
 		} else {

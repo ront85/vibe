@@ -1,6 +1,7 @@
 import { ModifyState, cx } from '~/lib/utils'
 import SettingsPage from '~/pages/settings/Page'
 import { useEffect, useState } from 'react'
+import { isTauri } from '@tauri-apps/api/core'
 
 interface SettingsModalProps {
 	visible: boolean
@@ -11,8 +12,7 @@ export default function SettingsModal({ visible, setVisible }: SettingsModalProp
 
 	useEffect(() => {
 		const detectPlatform = async () => {
-			const isTauri = '__TAURI__' in window
-			if (isTauri) {
+			if (isTauri()) {
 				const os = await import('@tauri-apps/plugin-os')
 				setPlatform(os.platform())
 			}

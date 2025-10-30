@@ -1,4 +1,4 @@
-import { invoke } from '@tauri-apps/api/core'
+import { invoke, isTauri } from '@tauri-apps/api/core'
 import { ReactNode, createContext, useContext, useEffect, useRef } from 'react'
 import { useLocalStorage } from 'usehooks-ts'
 import { TextFormat } from '~/components/FormatSelect'
@@ -173,12 +173,11 @@ export function PreferenceProvider({ children }: { children: ReactNode }) {
 
 	useEffect(() => {
 		const checkPlatform = async () => {
-			const isTauri = '__TAURI__' in window
 			if (!isMounted.current) {
 				isMounted.current = true
 				return
 			}
-			if (isTauri) {
+			if (isTauri()) {
 				const os = await import('@tauri-apps/plugin-os')
 				if (os.platform() === 'windows') {
 					invoke('set_high_gpu_preference', { mode: highGraphicsPreference })

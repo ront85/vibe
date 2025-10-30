@@ -3,6 +3,7 @@ import { ReactComponent as CopyIcon } from '~/icons/copy.svg'
 import { ModifyState, cx, getIssueUrl, resetApp } from '~/lib/utils'
 import { ErrorModalState } from '~/providers/ErrorModal'
 import { collectLogs } from '~/lib/logs'
+import { isTauri } from '@tauri-apps/api/core'
 
 interface ErrorModalProps {
 	state: ErrorModalState
@@ -26,8 +27,7 @@ export default function ErrorModal({ state, setState }: ErrorModalProps) {
 		}
 
 		const url = await getIssueUrl(state?.log + '\n' + info)
-		const isTauri = '__TAURI__' in window
-		if (isTauri) {
+		if (isTauri()) {
 			const shell = await import('@tauri-apps/plugin-shell')
 			shell.open(url)
 		} else {
@@ -47,8 +47,7 @@ export default function ErrorModal({ state, setState }: ErrorModalProps) {
 						className="w-6 h-6 z-10 right-4 bottom-4 absolute strokeBase-content
     opacity-50 cursor-pointer"
 						onMouseDown={async () => {
-							const isTauri = '__TAURI__' in window
-							if (isTauri) {
+							if (isTauri()) {
 								const clipboard = await import('@tauri-apps/plugin-clipboard-manager')
 								clipboard.writeText(state?.log ?? '')
 							} else {

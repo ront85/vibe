@@ -5,6 +5,7 @@ import { useEffect } from 'react'
 import { listen } from '@tauri-apps/api/event'
 import { useNavigate } from 'react-router-dom'
 import * as config from '~/lib/config'
+import { isTauri } from '@tauri-apps/api/core'
 
 interface UseSingleInstanceProps {
 	setFiles: ModifyState<NamedPath[]>
@@ -15,8 +16,7 @@ export function useSingleInstance({ setFiles }: UseSingleInstanceProps) {
 	const navigate = useNavigate()
 
 	async function handleSingleInstance() {
-		const isTauri = '__TAURI__' in window
-		if (!isTauri) {
+		if (!isTauri()) {
 			return
 		}
 
