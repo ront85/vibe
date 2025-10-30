@@ -89,7 +89,13 @@ const loadResources = async (language: string) => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const translations: any = {}
 
-		if (isTauri()) {
+		// In Tauri dev mode (with vite dev server), resources are served via HTTP
+		// In Tauri production, use Tauri's resolveResource
+		// In browser mode, always use HTTP
+		const isDev = !import.meta.env.PROD
+		const shouldUseTauriResource = isTauri() && !isDev
+
+		if (shouldUseTauriResource) {
 			// Production mode: Load from Tauri bundled resources
 			const resourcePath = `./locales/${language}`
 			const languageDirectory = await resolveResource(resourcePath)
@@ -104,7 +110,7 @@ const loadResources = async (language: string) => {
 				})
 			)
 		} else {
-			// Development mode: Load from HTTP
+			// Development mode or browser mode: Load from HTTP
 			const namespaces = ['common', 'language']
 			await Promise.all(
 				namespaces.map(async (namespace) => {
