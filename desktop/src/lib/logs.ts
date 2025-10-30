@@ -3,77 +3,95 @@ import { invoke } from '@tauri-apps/api/core'
 import { ls } from './utils'
 
 export async function getPrettyVersion() {
-	const appVersion = await app.getVersion()
-	const appName = await app.getName()
-	let version = `${appName} ${appVersion}`
-	const cudaVersion = await invoke('get_cuda_version')
-	const rocmVersion = await invoke('get_rocm_version')
-	const avx2Enabled = await invoke('is_avx2_enabled')
-	const isPortable = await invoke('is_portable')
-	if (cudaVersion) {
-		version += ` (cuda ${cudaVersion})`
+	const isTauri = '__TAURI__' in window
+	if (!isTauri) {
+		return 'Vibe (browser mode)'
 	}
-	if (!avx2Enabled) {
-		version += ` (older cpu)`
+
+	try {
+		const appVersion = await app.getVersion()
+		const appName = await app.getName()
+		let version = `${appName} ${appVersion}`
+		const cudaVersion = await invoke('get_cuda_version')
+		const rocmVersion = await invoke('get_rocm_version')
+		const avx2Enabled = await invoke('is_avx2_enabled')
+		const isPortable = await invoke('is_portable')
+		if (cudaVersion) {
+			version += ` (cuda ${cudaVersion})`
+		}
+		if (!avx2Enabled) {
+			version += ` (older cpu)`
+		}
+		if (isPortable) {
+			version += ` (portable)`
+		}
+		if (rocmVersion) {
+			version += ` (rocm ${rocmVersion})`
+		}
+		return version
+	} catch (e) {
+		console.error('Failed to get version:', e)
+		return 'Vibe (error getting version)'
 	}
-	if (isPortable) {
-		version += ` (portable)`
-	}
-	if (rocmVersion) {
-		version += ` (rocm ${rocmVersion})`
-	}
-	return version
 }
 
 export async function getAppInfo() {
-	const appVersion = await getPrettyVersion()
-	const commitHash = await invoke('get_commit_hash')
-	let x86Features = await invoke<string | null>('get_x86_features')
-	if (x86Features) {
-		x86Features = JSON.stringify(x86Features, null, 0)
-	} else {
-		x86Features = 'CPU feature detection is not supported on this architecture.'
+	const isTauri = '__TAURI__' in window
+	if (!isTauri) {
+		return 'App Info: Browser mode (no Tauri context)'
 	}
 
-	// Dynamically import os module only in Tauri context
-	let arch = 'unknown'
-	let platform = 'unknown'
-	let kVer = 'unknown'
-	let osType = 'unknown'
-	let osVer = 'unknown'
+	try {
+		const appVersion = await getPrettyVersion()
+		const commitHash = await invoke('get_commit_hash')
+		let x86Features = await invoke<string | null>('get_x86_features')
+		if (x86Features) {
+			x86Features = JSON.stringify(x86Features, null, 0)
+		} else {
+			x86Features = 'CPU feature detection is not supported on this architecture.'
+		}
 
-	const isTauri = '__TAURI__' in window
-	if (isTauri) {
+		// Dynamically import os module only in Tauri context
+		let arch = 'unknown'
+		let platform = 'unknown'
+		let kVer = 'unknown'
+		let osType = 'unknown'
+		let osVer = 'unknown'
+
 		const os = await import('@tauri-apps/plugin-os')
 		arch = os.arch()
 		platform = os.platform()
 		kVer = os.version()
 		osType = os.type()
 		osVer = os.version()
+
+		const configPath = await invoke<string>('get_models_folder')
+		const entries = await ls(configPath)
+		const cudaVersion = await invoke('get_cuda_version')
+		const models = entries
+			.filter((e) => e.name?.endsWith('.bin'))
+			.map((e) => e.name)
+			.join(', ')
+		const defaultModel = localStorage.getItem('prefs_model_path')?.split('/')?.pop() ?? 'Not Found'
+		const cargoFeatures = (await invoke<string[]>('get_cargo_features')) || 'n/a'
+		return [
+			`App Version: ${appVersion}`,
+			`Commit Hash: ${commitHash}`,
+			`Arch: ${arch}`,
+			`Platform: ${platform}`,
+			`Kernel Version: ${kVer}`,
+			`OS: ${osType}`,
+			`OS Version: ${osVer}`,
+			`Cuda Version: ${cudaVersion || 'n/a'}`,
+			`Models: ${models}`,
+			`Default Model: ${defaultModel}`,
+			`Cargo features: ${Array.isArray(cargoFeatures) ? cargoFeatures.join(', ') : cargoFeatures}`,
+			`\n\n${x86Features}`,
+		].join('\n')
+	} catch (e) {
+		console.error('Failed to get app info:', e)
+		return `App Info Error: ${String(e)}`
 	}
-	const configPath = await invoke<string>('get_models_folder')
-	const entries = await ls(configPath)
-	const cudaVersion = await invoke('get_cuda_version')
-	const models = entries
-		.filter((e) => e.name?.endsWith('.bin'))
-		.map((e) => e.name)
-		.join(', ')
-	const defaultModel = localStorage.getItem('prefs_model_path')?.split('/')?.pop() ?? 'Not Found'
-	const cargoFeatures = (await invoke<string[]>('get_cargo_features')) || 'n/a'
-	return [
-		`App Version: ${appVersion}`,
-		`Commit Hash: ${commitHash}`,
-		`Arch: ${arch}`,
-		`Platform: ${platform}`,
-		`Kernel Version: ${kVer}`,
-		`OS: ${osType}`,
-		`OS Version: ${osVer}`,
-		`Cuda Version: ${cudaVersion || 'n/a'}`,
-		`Models: ${models}`,
-		`Default Model: ${defaultModel}`,
-		`Cargo features: ${cargoFeatures.join(', ')}`,
-		`\n\n${x86Features}`,
-	].join('\n')
 }
 
 export async function collectLogs() {
